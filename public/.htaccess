@@ -1,0 +1,10 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # No redireccionar archivos o directorios reales (como css, js, img)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Redirigir todo lo demás al index.php
+    RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
