@@ -31,7 +31,7 @@ checkAuth();
             <span>Control Entrada</span>
         </div>
         <div class="user-menu">
-            <span style="font-weight: 500; margin-right: 1rem;" class="hide-mobile">Hola, <?php echo $_SESSION['nombre']; ?></span>
+            <span style="font-weight: 500; margin-right: 1rem;" class="hide-mobile"><?php echo $_SESSION['nombre']; ?></span>
             <a href="logout.php" class="logout-link">
                 <i data-lucide="log-out" style="width: 18px; height: 18px; vertical-align: middle;"></i>
                 Salir

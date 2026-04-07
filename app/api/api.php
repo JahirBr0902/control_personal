@@ -88,11 +88,11 @@ try {
 
         case 'registrar_entrada_personal':
             $protocolo = [
-                'estado_consciente' => $input['estado_consciente'] ?? true,
-                'bajo_sustancia' => $input['bajo_sustancia'] ?? false,
-                'limpio' => $input['limpio'] ?? true,
-                'uniforme_completo' => $input['uniforme_completo'] ?? true,
-                'observaciones' => $input['observaciones'] ?? ''
+                'estado_consciente' => isset($input['estado_consciente']) ? (bool)$input['estado_consciente'] : true,
+                'bajo_sustancia'    => isset($input['bajo_sustancia']) ? (bool)$input['bajo_sustancia'] : false,
+                'limpio'            => isset($input['limpio']) ? (bool)$input['limpio'] : true,
+                'uniforme_completo' => isset($input['uniforme_completo']) ? (bool)$input['uniforme_completo'] : true,
+                'observaciones'     => $input['observaciones'] ?? ''
             ];
             $data = [
                 'personal_id' => $input['personal_id'],
@@ -105,11 +105,11 @@ try {
 
         case 'registrar_entrada_masiva':
             $protocolo = [
-                'estado_consciente' => $input['estado_consciente'] ?? true,
-                'bajo_sustancia' => $input['bajo_sustancia'] ?? false,
-                'limpio' => $input['limpio'] ?? true,
-                'uniforme_completo' => $input['uniforme_completo'] ?? true,
-                'observaciones' => $input['observaciones'] ?? ''
+                'estado_consciente' => isset($input['estado_consciente']) ? (bool)$input['estado_consciente'] : true,
+                'bajo_sustancia'    => isset($input['bajo_sustancia']) ? (bool)$input['bajo_sustancia'] : false,
+                'limpio'            => isset($input['limpio']) ? (bool)$input['limpio'] : true,
+                'uniforme_completo' => isset($input['uniforme_completo']) ? (bool)$input['uniforme_completo'] : true,
+                'observaciones'     => $input['observaciones'] ?? ''
             ];
             $ids = $input['personal_ids'] ?? [];
             $success = true;
@@ -130,11 +130,11 @@ try {
             $success = true;
             foreach ($registros as $reg) {
                 $protocolo = [
-                    'estado_consciente' => $reg['estado_consciente'] ?? true,
-                    'bajo_sustancia' => $reg['bajo_sustancia'] ?? false,
-                    'limpio' => $reg['limpio'] ?? true,
-                    'uniforme_completo' => $reg['uniforme_completo'] ?? true,
-                    'observaciones' => $reg['observaciones'] ?? ''
+                    'estado_consciente' => isset($reg['estado_consciente']) ? (bool)$reg['estado_consciente'] : true,
+                    'bajo_sustancia'    => isset($reg['bajo_sustancia']) ? (bool)$reg['bajo_sustancia'] : false,
+                    'limpio'            => isset($reg['limpio']) ? (bool)$reg['limpio'] : true,
+                    'uniforme_completo' => isset($reg['uniforme_completo']) ? (bool)$reg['uniforme_completo'] : true,
+                    'observaciones'     => $reg['observaciones'] ?? ''
                 ];
                 $data = [
                     'personal_id' => $reg['personal_id'],
