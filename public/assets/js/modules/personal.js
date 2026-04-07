@@ -19,7 +19,7 @@ const PersonalModule = {
                 <div style="display: flex; gap: 0.75rem;">
                     ${pending.length > 0 ? `
                         <button class="btn" id="btn-bulk-register" style="background: #4f46e5; color: white; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; padding: 0.75rem 1.25rem; border-radius: 8px; border: none; cursor: pointer;">
-                            <i data-lucide="users" style="width: 18px;"></i> Registro Masivo (Asistencia)
+                            <i data-lucide="users" style="width: 18px;"></i> Registro Masivo
                         </button>
                     ` : ''}
                     ${registered.length > 0 ? `
@@ -126,7 +126,7 @@ const PersonalModule = {
             html: `
                 <div style="text-align: left; margin-top: 1rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0 0.5rem;">
-                        <span style="font-size: 0.875rem; color: #64748b;">Marca los que ingresaron. Los desmarcados en protocolo se guardarán como alerta (false).</span>
+                        <span style="font-size: 0.875rem; color: #64748b;">Marca los que ingresaron. Los desmarcados se guardarán como falla en protocolo.</span>
                         <button type="button" id="btn-master-toggle" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">Seleccionar Todos</button>
                     </div>
                     <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -240,10 +240,11 @@ const PersonalModule = {
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4'); 
+        const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const today = new Date().toLocaleDateString();
 
+        // Header Corporativo
         doc.setFillColor(30, 41, 59);
         doc.rect(0, 0, pageWidth, 25, 'F');
         doc.setFontSize(22);
@@ -262,16 +263,8 @@ const PersonalModule = {
         doc.line(14, 37, 85, 37);
 
         doc.setFont('helvetica', 'normal');
-        doc.text(`Fecha del Registro:`, 14, 45);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${today}`, 50, 45);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Generado por:`, 14, 50);
-        doc.text(`${document.querySelector('.user-menu span')?.innerText || 'Administrador'}`, 50, 50);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.text('Declaro bajo firma que he ingresado a las instalaciones y estoy de acuerdo con el protocolo de seguridad realizado.', 14, 58);
+        doc.text(`Fecha: ${today}`, 14, 45);
+        doc.text(`Generado por: ${document.querySelector('.user-menu span')?.innerText || 'Administrador'}`, 14, 50);
 
         const tableData = personal.map(p => {
             const hora = new Date(p.hora_llegada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -280,42 +273,34 @@ const PersonalModule = {
                 pcol = typeof p.protocolo === 'string' ? JSON.parse(p.protocolo) : (p.protocolo || {});
             } catch (e) { console.error("Error parsing protocolo", e); }
             
-            let status = [];
-            if (pcol.estado_consciente) status.push('Consciente');
-            if (pcol.limpio) status.push('Limpio');
-            if (pcol.uniforme_completo) status.push('Uniforme');
-            if (pcol.bajo_sustancia) status.push('BAJO SUSTANCIA');
+            let desc = [];
+            desc.push(pcol.estado_consciente ? 'Consciente' : 'NO CONSCIENTE');
+            desc.push(pcol.limpio ? 'Aseado' : 'NO LIMPIO');
+            desc.push(pcol.uniforme_completo ? 'Uniforme Ok' : 'UNIFORME INC.');
+            if (pcol.bajo_sustancia) desc.push('¡BAJO SUSTANCIA!');
+            
+            const obs = pcol.observaciones ? `\nObs: ${pcol.observaciones}` : '';
 
-            return [p.nombre, hora, status.length ? status.join(', ') : 'Ok', ''];
+            return [p.nombre, hora, desc.join(' | ') + obs, ''];
         });
 
         doc.autoTable({
-            startY: 65,
-            head: [['Nombre del Empleado', 'Hora', 'Protocolo / Alertas', 'Firma de Conformidad']],
+            startY: 60,
+            head: [['Nombre del Empleado', 'Hora', 'Protocolo / Alertas', 'Firma']],
             body: tableData,
             theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10, fontStyle: 'bold', halign: 'center' },
-            columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 20, halign: 'center' }, 2: { cellWidth: 60 }, 3: { cellWidth: 45, minCellHeight: 18 } },
-            styles: { fontSize: 9, valign: 'middle' },
-            alternateRowStyles: { fillColor: [248, 250, 252] }
+            headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+            columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 20, halign: 'center' }, 2: { cellWidth: 70 }, 3: { cellWidth: 40, minCellHeight: 18 } },
+            styles: { fontSize: 8, valign: 'middle' }
         });
 
-        const finalY = doc.lastAutoTable.finalY + 25;
-        if (finalY < doc.internal.pageSize.getHeight() - 30) {
-            doc.line(pageWidth / 2 - 35, finalY, pageWidth / 2 + 35, finalY);
-            doc.setFontSize(9);
-            doc.text('Sello y Firma Responsable de Turno', pageWidth / 2, finalY + 5, { align: 'center' });
+        const finalY = doc.lastAutoTable.finalY + 20;
+        if (finalY < 270) {
+            doc.line(pageWidth/2 - 30, finalY, pageWidth/2 + 30, finalY);
+            doc.text('Firma Responsable', pageWidth/2, finalY + 5, { align: 'center' });
         }
 
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Witmac ERP - Sistema de Control Profesional - Página ${i} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
-        }
-
-        doc.save(`HOJA_FIRMAS_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Hoja_Firmas_${new Date().toISOString().split('T')[0]}.pdf`);
     },
 
     async showRegisterModal(personalId, nombre) {
@@ -323,32 +308,16 @@ const PersonalModule = {
             title: `Registrar Entrada: ${nombre}`,
             html: `
                 <div style="text-align: left; margin-top: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Protocolo de Seguridad</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
-                            <input type="checkbox" id="swal-consciente" checked> Consciente
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
-                            <input type="checkbox" id="swal-limpio" checked> Limpio/Aseado
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
-                            <input type="checkbox" id="swal-uniforme" checked> Uniforme
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; color: #e53e3e;">
-                            <input type="checkbox" id="swal-sustancia"> Bajo Sustancias
-                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;"><input type="checkbox" id="swal-consciente" checked> Consciente</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;"><input type="checkbox" id="swal-limpio" checked> Limpio/Aseado</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;"><input type="checkbox" id="swal-uniforme" checked> Uniforme</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; color: #e53e3e;"><input type="checkbox" id="swal-sustancia"> Bajo Sustancias</label>
                     </div>
-                    <label for="swal-observaciones" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Observaciones</label>
-                    <textarea id="swal-observaciones" class="swal2-textarea" placeholder="Novedades o comentarios..." style="margin: 0; width: 100%; box-sizing: border-box;"></textarea>
-                    <label for="swal-hora" style="display: block; margin: 1rem 0 0.5rem; font-weight: 500;">Hora de Entrada</label>
-                    <input type="datetime-local" id="swal-hora" class="swal2-input" value="${new Date().toLocaleString('sv-SE').slice(0, 16)}" style="margin: 0; width: 100%;">
+                    <textarea id="swal-observaciones" class="swal2-textarea" placeholder="Novedades..." style="margin: 0; width: 100%; box-sizing: border-box;"></textarea>
+                    <input type="datetime-local" id="swal-hora" class="swal2-input" value="${new Date().toLocaleString('sv-SE').slice(0, 16)}" style="margin: 1rem 0 0; width: 100%;">
                 </div>
             `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: 'Confirmar Entrada',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#4f46e5',
             preConfirm: () => {
                 return {
                     personal_id: personalId,
@@ -363,20 +332,14 @@ const PersonalModule = {
         });
 
         if (formValues) {
-            try {
-                const res = await fetch('api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'registrar_entrada_personal', ...formValues })
-                });
-                const result = await res.json();
-                if (result.success) {
-                    Swal.fire('¡Registrado!', `Entrada de ${nombre} confirmada.`, 'success').then(() => window.dispatchEvent(new HashChangeEvent('hashchange')));
-                } else {
-                    Swal.fire('Error', result.message, 'error');
-                }
-            } catch (e) {
-                Swal.fire('Error', 'No se pudo completar el registro', 'error');
+            const res = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'registrar_entrada_personal', ...formValues })
+            });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire('Éxito', 'Entrada registrada', 'success').then(() => window.dispatchEvent(new HashChangeEvent('hashchange')));
             }
         }
     }

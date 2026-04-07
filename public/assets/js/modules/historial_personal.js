@@ -298,7 +298,7 @@ const HistorialPersonalModule = {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('WITMAC - CONTROL SEMANAL DE ASISTENCIA', 14, 13);
+        doc.text('WITMAC - CONTROL SEMANAL', 14, 13);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(
