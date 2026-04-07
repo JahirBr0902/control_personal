@@ -103,6 +103,50 @@ try {
             echo json_encode(['success' => RegistroPersonal::crear($data), 'message' => 'Registro guardado']);
             break;
 
+        case 'registrar_entrada_masiva':
+            $protocolo = [
+                'estado_consciente' => $input['estado_consciente'] ?? true,
+                'bajo_sustancia' => $input['bajo_sustancia'] ?? false,
+                'limpio' => $input['limpio'] ?? true,
+                'uniforme_completo' => $input['uniforme_completo'] ?? true,
+                'observaciones' => $input['observaciones'] ?? ''
+            ];
+            $ids = $input['personal_ids'] ?? [];
+            $success = true;
+            foreach ($ids as $id) {
+                $data = [
+                    'personal_id' => $id,
+                    'registrador_id' => $_SESSION['user_id'],
+                    'protocolo' => $protocolo,
+                    'hora_llegada' => $input['hora_llegada'] ?: date('Y-m-d H:i:s')
+                ];
+                if (!RegistroPersonal::crear($data)) $success = false;
+            }
+            echo json_encode(['success' => $success, 'message' => $success ? 'Registros masivos guardados' : 'Error en algunos registros']);
+            break;
+
+        case 'registrar_entrada_multiple':
+            $registros = $input['registros'] ?? [];
+            $success = true;
+            foreach ($registros as $reg) {
+                $protocolo = [
+                    'estado_consciente' => $reg['estado_consciente'] ?? true,
+                    'bajo_sustancia' => $reg['bajo_sustancia'] ?? false,
+                    'limpio' => $reg['limpio'] ?? true,
+                    'uniforme_completo' => $reg['uniforme_completo'] ?? true,
+                    'observaciones' => $reg['observaciones'] ?? ''
+                ];
+                $data = [
+                    'personal_id' => $reg['personal_id'],
+                    'registrador_id' => $_SESSION['user_id'],
+                    'protocolo' => $protocolo,
+                    'hora_llegada' => $reg['hora_llegada'] ?: date('Y-m-d H:i:s')
+                ];
+                if (!RegistroPersonal::crear($data)) $success = false;
+            }
+            echo json_encode(['success' => $success, 'message' => 'Registros procesados']);
+            break;
+
         case 'get_vehiculos_en_ruta':
             echo json_encode(['success' => true, 'data' => ControlVehiculo::getVehiculosEnRuta()]);
             break;

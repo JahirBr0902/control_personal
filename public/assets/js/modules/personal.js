@@ -8,12 +8,26 @@ const PersonalModule = {
         const registered = personal.filter(p => p.registro_id);
 
         return `
-            <div class="welcome-section">
-                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                    <a href="#dashboard" style="color: var(--text-muted);"><i data-lucide="arrow-left"></i></a>
-                    <h2 style="margin: 0;">Control de Personal Diario</h2>
+            <div class="welcome-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                        <a href="#dashboard" style="color: var(--text-muted);"><i data-lucide="arrow-left"></i></a>
+                        <h2 style="margin: 0;">Control de Personal Diario</h2>
+                    </div>
+                    <p style="color: var(--text-muted);">Gestiona las entradas del personal de forma manual.</p>
                 </div>
-                <p style="color: var(--text-muted);">Gestiona las entradas del personal de forma manual.</p>
+                <div style="display: flex; gap: 0.75rem;">
+                    ${pending.length > 0 ? `
+                        <button class="btn" id="btn-bulk-register" style="background: #4f46e5; color: white; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; padding: 0.75rem 1.25rem; border-radius: 8px; border: none; cursor: pointer;">
+                            <i data-lucide="users" style="width: 18px;"></i> Registro Masivo
+                        </button>
+                    ` : ''}
+                    ${registered.length > 0 ? `
+                        <button class="btn" id="btn-print-signatures" style="background: #10b981; color: white; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; padding: 0.75rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+                            <i data-lucide="printer" style="width: 18px;"></i> Imprimir Hoja de Firmas
+                        </button>
+                    ` : ''}
+                </div>
             </div>
 
             <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
@@ -82,6 +96,215 @@ const PersonalModule = {
                 this.showRegisterModal(id, nombre);
             });
         });
+
+        const printBtn = document.getElementById('btn-print-signatures');
+        if (printBtn) {
+            printBtn.addEventListener('click', () => this.generatePDF());
+        }
+
+        const bulkBtn = document.getElementById('btn-bulk-register');
+        if (bulkBtn) {
+            bulkBtn.addEventListener('click', () => this.showBulkRegisterModal());
+        }
+    },
+
+    async showBulkRegisterModal() {
+        const res = await fetch('api.php?action=get_personal');
+        const result = await res.json();
+        const pending = (result.data || []).filter(p => !p.registro_id);
+
+        if (pending.length === 0) {
+            Swal.fire('Atención', 'No hay personal pendiente para registrar.', 'info');
+            return;
+        }
+
+        const now = new Date().toLocaleString('sv-SE').slice(0, 16);
+
+        const { value: formValues } = await Swal.fire({
+            title: 'Lista de Asistencia Rápida',
+            width: '1000px',
+            html: `
+                <div style="text-align: left; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0 0.5rem;">
+                        <span style="font-size: 0.875rem; color: #64748b;">Marca los que ingresaron y ajusta sus datos si es necesario.</span>
+                        <button type="button" id="btn-master-toggle" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">Seleccionar Todos</button>
+                    </div>
+                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 0.75rem; width: 40px; text-align: center;">In</th>
+                                    <th style="padding: 0.75rem;">Nombre del Personal</th>
+                                    <th style="padding: 0.75rem; width: 160px;">Hora Entrada</th>
+                                    <th style="padding: 0.75rem; width: 140px; text-align: center;">Protocolo (C|L|U|S)</th>
+                                    <th style="padding: 0.75rem;">Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-table-body">
+                                ${pending.map(p => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;" class="bulk-row" data-id="${p.id}">
+                                        <td style="padding: 0.5rem; text-align: center;">
+                                            <input type="checkbox" class="row-check" style="width: 18px; height: 18px; cursor: pointer;">
+                                        </td>
+                                        <td style="padding: 0.5rem; font-weight: 600; color: #1e293b;">${p.nombre}</td>
+                                        <td style="padding: 0.5rem;">
+                                            <input type="datetime-local" class="row-time" value="${now}" style="width: 100%; padding: 0.25rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.75rem;">
+                                        </td>
+                                        <td style="padding: 0.5rem; text-align: center;">
+                                            <div style="display: flex; gap: 0.4rem; justify-content: center;">
+                                                <input type="checkbox" class="row-consciente" checked title="Consciente">
+                                                <input type="checkbox" class="row-limpio" checked title="Limpio">
+                                                <input type="checkbox" class="row-uniforme" checked title="Uniforme">
+                                                <input type="checkbox" class="row-sustancia" title="Bajo Sustancia">
+                                            </div>
+                                        </td>
+                                        <td style="padding: 0.5rem;">
+                                            <input type="text" class="row-obs" placeholder="Novedad..." style="width: 100%; padding: 0.25rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.75rem;">
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            didOpen: () => {
+                const btn = document.getElementById('btn-master-toggle');
+                btn.onclick = () => {
+                    const checks = document.querySelectorAll('.row-check');
+                    const allChecked = Array.from(checks).every(c => c.checked);
+                    checks.forEach(c => c.checked = !allChecked);
+                    btn.innerText = !allChecked ? 'Desmarcar Todos' : 'Seleccionar Todos';
+                };
+            },
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Registrar Seleccionados',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#4f46e5',
+            preConfirm: () => {
+                const rows = document.querySelectorAll('.bulk-row');
+                const registros = [];
+                rows.forEach(row => {
+                    const check = row.querySelector('.row-check');
+                    if (check.checked) {
+                        registros.push({
+                            personal_id: row.dataset.id,
+                            hora_llegada: row.querySelector('.row-time').value,
+                            estado_consciente: row.querySelector('.row-consciente').checked,
+                            limpio: row.querySelector('.row-limpio').checked,
+                            uniforme_completo: row.querySelector('.row-uniforme').checked,
+                            bajo_sustancia: row.querySelector('.row-sustancia').checked,
+                            observaciones: row.querySelector('.row-obs').value
+                        });
+                    }
+                });
+                
+                if (registros.length === 0) {
+                    Swal.showValidationMessage('Debes marcar al menos una persona que haya ingresado');
+                    return false;
+                }
+                return { registros };
+            }
+        });
+
+        if (formValues) {
+            try {
+                Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'registrar_entrada_multiple', ...formValues })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    Swal.fire('¡Éxito!', 'Registros de asistencia guardados.', 'success')
+                        .then(() => window.dispatchEvent(new HashChangeEvent('hashchange')));
+                } else {
+                    Swal.fire('Error', result.message, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    },
+
+    async generatePDF() {
+        const res = await fetch('api.php?action=get_personal');
+        const result = await res.json();
+        const personal = (result.data || []).filter(p => p.registro_id);
+
+        if (personal.length === 0) {
+            Swal.fire('Atención', 'No hay personal registrado hoy para imprimir.', 'warning');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const today = new Date().toLocaleDateString();
+
+        // Header
+        doc.setFontSize(18);
+        doc.setTextColor(40);
+        doc.text('Witmac - Control de Personal', 14, 22);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Hoja de Firmas de Ingreso Diario - Fecha: ${today}`, 14, 30);
+        
+        doc.setFontSize(10);
+        doc.text('Declaro bajo firma que he ingresado a las instalaciones y estoy de acuerdo con el protocolo de seguridad realizado.', 14, 38);
+
+        // Table
+        const tableData = personal.map(p => {
+            const hora = new Date(p.hora_llegada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let pcol = {};
+            try {
+                pcol = typeof p.protocolo === 'string' ? JSON.parse(p.protocolo) : (p.protocolo || {});
+            } catch (e) {
+                console.error("Error parsing protocolo para " + p.nombre, e);
+            }
+            
+            let status = [];
+            if (pcol.estado_consciente) status.push('Consciente');
+            if (pcol.limpio) status.push('Limpio');
+            if (pcol.uniforme_completo) status.push('Uniforme');
+            if (pcol.bajo_sustancia) status.push('BAJO SUSTANCIA');
+
+            return [
+                p.nombre,
+                hora,
+                status.length ? status.join(', ') : 'Ok',
+                '' // Espacio para firma
+            ];
+        });
+
+        doc.autoTable({
+            startY: 45,
+            head: [['Nombre del Empleado', 'Hora Entrada', 'Protocolo / Observaciones', 'Firma de Conformidad']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+            columnStyles: {
+                0: { cellWidth: 50 },
+                1: { cellWidth: 25 },
+                2: { cellWidth: 60 },
+                3: { cellWidth: 50, minCellHeight: 20 } // Espacio alto para firma
+            },
+            styles: { fontSize: 9, valign: 'middle' }
+        });
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Witmac • Sistema de Control Profesional • Página ${i} de ${pageCount}`, 14, doc.internal.pageSize.getHeight() - 10);
+        }
+
+        doc.save(`hoja_firmas_${new Date().toISOString().split('T')[0]}.pdf`);
     },
 
     async showRegisterModal(personalId, nombre) {
@@ -146,7 +369,6 @@ const PersonalModule = {
                 if (result.success) {
                     Swal.fire('¡Registrado!', `Entrada de ${nombre} confirmada.`, 'success')
                         .then(() => {
-                            // Forzar recarga de la vista
                             window.dispatchEvent(new HashChangeEvent('hashchange'));
                         });
                 } else {

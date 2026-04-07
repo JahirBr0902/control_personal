@@ -19,8 +19,8 @@ class Personal {
 
     public static function getPersonalConEstadoHoy() {
         $db = Conexion::getConexion();
-        // Usamos CAST para evitar problemas con los :: en PDO
-        $stmt = $db->query("SELECT p.*, r.id as registro_id, r.hora_llegada, r.hora_salida 
+        // Incluimos r.protocolo en el SELECT
+        $stmt = $db->query("SELECT p.*, r.id as registro_id, r.hora_llegada, r.hora_salida, r.protocolo 
                             FROM personal p 
                             LEFT JOIN registro_personal r ON p.id = r.personal_id 
                             AND CAST(r.hora_llegada AS DATE) = CURRENT_DATE 
